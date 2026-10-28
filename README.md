@@ -1,6 +1,6 @@
 # High-Volume Financial Transcations ETL Pipeline & Big Data Analytics
 
-An enterprise-grade, modular, and memory-efficient Python ETL (Extract, Transform, Load) pipeline designed to ingest, clean, validate, and load millions of financial banking ledger records into an optimized PostgreSQL relational database warehouse.
+Modular and memory-efficient Python ETL (Extract, Transform, Load) pipeline designed to ingest, clean, validate, and load millions of financial banking ledger records into an optimized PostgreSQL relational database warehouse.
 
 ---
 
