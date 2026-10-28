@@ -1,28 +1,40 @@
 import pandas as pd
 
-def clean_data_chunk(df: pd.DataFrame) -> pd.DataFrame:
+def clean_data_chunk(df: pd.DataFrame, source_name: str) -> pd.DataFrame:
     """
-    Cleans an individual chunk of data: drops duplicates, handles nulls, 
-    and standardizes data types.
+    Cleans chunks for bank transaction datasets: handles nulls, formats dates, 
+    cleans description text, casts numeric columns, and tags the data source.
     """
-    # Remove exact duplicate rows
+    # 1. Drop exact duplicates
     df = df.drop_duplicates()
     
-    # Example cleaning steps (customize based on your specific columns):
-    # 1. Fill missing numerical values with 0 or median
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    df[numeric_cols] = df[numeric_cols].fillna(0)
+    # 2. Standardize column names (strip whitespace and lower case)
+    df.columns = [col.strip().lower() for col in df.columns]
     
-    # 2. Fill missing categorical values with 'Unknown'
-    cat_cols = df.select_dtypes(include=['object']).columns
-    df[cat_cols] = df[cat_cols].fillna('Unknown')
-    
-    # 3. Standardize text data (e.g., lowercase strip strings)
-    for col in cat_cols:
-        if df[col].dtype == 'object':
-            df[col] = df[col].astype(str).str.strip()
-            
-    # 4. Ensure correct datetime formatting if date columns exist
-    # df['order_date'] = pd.to_datetime(df['order_date'], errors='coerce')
-    
+    # Handle possible spelling variation for withdrawals/withdrawls
+    if 'withdrawls' in df.columns and 'withdrawals' not in df.columns:
+        df = df.rename(columns={'withdrawls': 'withdrawals'})
+
+    # 3. Clean Description (Fill missing with 'Other', strip spaces)
+    if 'description' in df.columns:
+        df['description'] = df['description'].fillna('Other').astype(str).str.strip()
+
+    # 4. Parse Dates
+    if 'date' in df.columns:
+        df['transaction_date'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.drop(columns=['date']) # drop old date column
+        df['transaction_date'] = df['transaction_date'].dt.date # Keep date only
+
+    # 5. Clean Numeric Columns (Deposits, Withdrawals, Balance)
+    numeric_cols = [col for col in ['deposits', 'withdrawals', 'balance'] if col in df.columns]
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.00)
+
+    # 6. Drop rows where critical transaction date is missing
+    if 'transaction_date' in df.columns:
+        df = df.dropna(subset=['transaction_date'])
+
+    # 7. Add source dataset tag for auditing/tracking
+    df['source_dataset'] = source_name
+
     return df
